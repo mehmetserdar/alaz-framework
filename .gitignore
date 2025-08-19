@@ -1,0 +1,24 @@
+# Composer vendor klasörü
+/vendor/
+
+# Ortam dosyaları
+.env
+.env.*.local
+
+# Cache ve loglar
+/storage/
+
+# IDE ve sistem dosyaları
+.idea/
+.vscode/
+.DS_Store
+*.log
+
+# Test çıktıları
+coverage/
+
+# PHPStorm
+.phpstorm.meta.php
+
+# Diğer
+node_modules/

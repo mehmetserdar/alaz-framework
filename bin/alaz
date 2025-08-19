@@ -1,0 +1,184 @@
+#!/usr/bin/env php
+<?php
+// bin/alaz
+
+require __DIR__ . '/../vendor/autoload.php';
+
+// Komutlar
+$commands = [
+    'serve' => [
+        'description' => 'Geliştirme sunucusunu başlat (php built-in server)',
+        'handler' => function ($args) {
+            $host = $args[2] ?? 'localhost';
+            $port = $args[3] ?? '8080';
+            $cmd = sprintf('php -S %s:%s -t public', escapeshellarg($host), escapeshellarg($port));
+            echo "Sunucu başlatılıyor: http://$host:$port\n";
+            passthru($cmd);
+        }
+    ],
+    'list' => [
+        'description' => 'Tüm komutları listele',
+        'handler' => function () use (&$commands) {
+            echo "Kullanılabilir komutlar:\n";
+            foreach ($commands as $name => $info) {
+                echo "  $name\t{$info['description']}\n";
+            }
+        }
+    ],
+    'about' => [
+        'description' => 'alaz framework hakkında bilgi',
+        'handler' => function () {
+            echo "alaz PHP Micro-Framework\n";
+            echo "Inspired by laravel-framework\n";
+        }
+    ],
+    'make:controller' => [
+        'description' => 'Yeni bir controller oluştur (örn: make:controller PostController)',
+        'handler' => function ($args) {
+            $name = $args[2] ?? null;
+            if (!$name) {
+                echo "Kullanım: php alaz make:controller ControllerAdı\n";
+                return;
+            }
+
+            $class = preg_replace('/[^A-Za-z0-9_]/', '', $name);
+            if (empty($class)) {
+                echo "HATA: Geçersiz controller adı\n";
+                return;
+            }
+
+            // app dizinini oluştur
+            $appDir = __DIR__ . '/../app';
+            if (!is_dir($appDir)) {
+                if (!mkdir($appDir, 0777, true)) {
+                    echo "HATA: app dizini oluşturulamadı\n";
+                    return;
+                }
+            }
+
+            // Controllers dizinini oluştur
+            $controllerDir = $appDir . '/Controllers';
+            if (!is_dir($controllerDir)) {
+                if (!mkdir($controllerDir, 0777, true)) {
+                    echo "HATA: Controllers dizini oluşturulamadı\n";
+                    return;
+                }
+            }
+
+            $file = $controllerDir . '/' . $class . '.php';
+            if (file_exists($file)) {
+                echo "$class zaten mevcut!\n";
+                return;
+            }
+
+            $template = <<<'PHP'
+<?php
+namespace App\Controllers;
+
+use Psr\Http\Message\ServerRequestInterface;
+use Nyholm\Psr7\Response;
+use App\Controllers\BaseController;
+
+class %CLASS% extends BaseController
+{
+    public function index(ServerRequestInterface $request)
+    {
+        global $container;
+        $view = $container->get('view');
+        $html = $view->render('welcome.php', [
+            'title' => '%CLASS% Controller',
+            'message' => 'Bu controller başarıyla oluşturuldu!'
+        ]);
+        return \App\Response::html($html);
+    }
+}
+PHP;
+
+            $content = str_replace('%CLASS%', $class, $template);
+            if (file_put_contents($file, $content) === false) {
+                echo "HATA: $file dosyası yazılamadı!\n";
+                return;
+            }
+
+            echo "$class başarıyla oluşturuldu: app/Controllers/$class.php\n";
+        }
+    ],
+    'make:model' => [
+        'description' => 'Yeni bir model oluştur (örn: make:model Post)',
+        'handler' => function ($args) {
+            $name = $args[2] ?? null;
+            if (!$name) {
+                echo "Kullanım: alaz make:model ModelAdı\n";
+                return;
+            }
+            $class = preg_replace('/[^A-Za-z0-9_]/', '', $name);
+            $dir = __DIR__ . '/../app/Models';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            $file = $dir . '/' . $class . '.php';
+            if (file_exists($file)) {
+                echo "$class zaten mevcut!\n";
+                return;
+            }
+            $template = <<<PHP
+<?php
+namespace App\Models;
+
+use App\Model;
+
+class $class extends Model
+{
+    protected static \$table = 'posts';
+
+}
+PHP;
+            file_put_contents($file, $template);
+            echo "$class oluşturuldu: app/Models/$class.php\n";
+        }
+    ],
+    'make:middleware' => [
+        'description' => 'Yeni bir middleware oluştur (örn: make:middleware AuthMiddleware)',
+        'handler' => function ($args) {
+            $name = $args[2] ?? null;
+            if (!$name) {
+                echo "Kullanım: php alaz make:middleware MiddlewareAdı\n";
+                return;
+            }
+            $class = preg_replace('/[^A-Za-z0-9_]/', '', $name);
+            $dir = __DIR__ . '/../app/Middleware';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            $file = $dir . '/' . $class . '.php';
+            if (file_exists($file)) {
+                echo "$class zaten mevcut!\n";
+                return;
+            }
+            $template = "<?php\n"
+                . "namespace App\\Middleware;\n\n"
+                . "use Psr\\Http\\Message\\ServerRequestInterface;\n"
+                . "use Psr\\Http\\Message\\ResponseInterface;\n\n"
+                . "class $class\n"
+                . "{\n"
+                . "    public function __invoke(ServerRequestInterface \$request, callable \$next): ResponseInterface\n"
+                . "    {\n"
+                . "        // Middleware logic buraya\n"
+                . "        \$response = \$next(\$request);\n"
+                . "        return \$response;\n"
+                . "    }\n"
+                . "}\n";
+            file_put_contents($file, $template);
+            echo "$class oluşturuldu: $file\n";
+        }
+    ],
+];
+
+$cmd = $argv[1] ?? 'list';
+
+if (isset($commands[$cmd])) {
+    $commands[$cmd]['handler']($argv);
+} else {
+    echo "Bilinmeyen komut: $cmd\n";
+    $commands['list']['handler']();
+}

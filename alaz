@@ -1,0 +1,5 @@
+<?php
+#!/usr/bin/env php
+
+// Kökteki alaz dosyası, bin/alaz'a yönlendirir
+require __DIR__ . '/bin/alaz';
