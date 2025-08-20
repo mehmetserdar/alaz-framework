@@ -29,6 +29,31 @@ class Router
         $this->middlewares[] = $middleware;
     }
 
+    public function get($path, $handler)
+    {
+        $this->map('GET', $path, $handler);
+    }
+
+    public function post($path, $handler)
+    {
+        $this->map('POST', $path, $handler);
+    }
+
+    public function put($path, $handler)
+    {
+        $this->map('PUT', $path, $handler);
+    }
+
+    public function delete($path, $handler)
+    {
+        $this->map('DELETE', $path, $handler);
+    }
+
+    public function group($prefix, $callback)
+    {
+        return $this->router->group($prefix, $callback);
+    }
+
     public function dispatch($request)
     {
         $handler = function ($req) {
